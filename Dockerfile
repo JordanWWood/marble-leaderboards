@@ -1,3 +1,3 @@
-FROM golang:alpine
+FROM alpine
 COPY LeaderboardsBackend .
 CMD [ "./LeaderboardsBackend" ]
