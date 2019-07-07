@@ -6,4 +6,15 @@ go:
 env:
   - GO111MODULE=on
 
-script: ls
+jobs:
+  include:
+    - stage: build
+      script:
+        - go build
+    - stage: deploy
+      script:
+        - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin
+        - docker build -t mrblnetwork/leaderboards .
+        - "docker push mrblnetwork/leaderboards"
+        - "docker tag mrblnetwork/leaderboards mrblnetwork/leaderboards:$TRAVIS_TAG"
+        - "docker push mrblnetwork/leaderboards:$TRAVIS_TAG"
