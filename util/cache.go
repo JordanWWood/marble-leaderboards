@@ -20,8 +20,10 @@ func SetupCache() {
 		DB:       0,
 	})
 
-	pong, err := client.Ping().Result()
-	fmt.Println(pong, err)
+	_, err := client.Ping().Result()
+	if err != nil {
+		log.Println("Failed to connect to redis... caching is offline. ", err)
+	}
 }
 
 func CachedGET(r *gin.Engine, path string, action func(*gin.Context) []byte) {
