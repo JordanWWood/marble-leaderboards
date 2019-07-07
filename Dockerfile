@@ -1,4 +1,6 @@
 FROM golang:alpine as builder
+ENV GO111MODULE=on
+
 RUN mkdir /build
 ADD . /build/
 WORKDIR /build
