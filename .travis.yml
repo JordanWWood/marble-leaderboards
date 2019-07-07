@@ -18,7 +18,6 @@ jobs:
     - stage: deploy
       if: tag IS present
       script:
-        - go build
         - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin
         - docker build -t mrblnetwork/leaderboards .
         - "docker push mrblnetwork/leaderboards"
