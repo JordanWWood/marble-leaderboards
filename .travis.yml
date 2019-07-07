@@ -11,8 +11,10 @@ jobs:
     - stage: build
       script:
         - go build
+        - ls
     - stage: deploy
       script:
+        - go build
         - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin
         - docker build -t mrblnetwork/leaderboards .
         - "docker push mrblnetwork/leaderboards"
