@@ -16,6 +16,7 @@ jobs:
         - go build
         - ls
     - stage: deploy
+      if: tag IS present
       script:
         - go build
         - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin
