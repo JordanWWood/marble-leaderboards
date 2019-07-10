@@ -10,7 +10,6 @@ import (
 	"time"
 )
 
-//var mc *memcache.Client
 var client *redis.Client
 
 func SetupCache() {
@@ -28,12 +27,13 @@ func SetupCache() {
 
 func CachedGET(r *gin.Engine, path string, action func(*gin.Context) []byte) {
 	r.GET(path, func(c *gin.Context) {
+		defer handlePanic()
+
 		key := "leaderboards" + strings.Replace(path, "/", ".", -1) + "."
 		for i, param := range c.Params {
+			key += param.Value
 			if i+1 != len(c.Params) {
-				key += param.Value + "."
-			} else {
-				key += param.Value
+				key += "."
 			}
 		}
 
@@ -53,4 +53,8 @@ func CachedGET(r *gin.Engine, path string, action func(*gin.Context) []byte) {
 
 		fmt.Fprint(c.Writer, val)
 	})
+}
+
+func handlePanic() {
+
 }

@@ -70,14 +70,6 @@ func userHandler(c *gin.Context) []byte {
 
 	if request.ID == "" {
 		c.JSON(400, gin.H{"error": "No user provided"})
-	} else if request.Game == "" {
-		pipeline = fmt.Sprintf(pipeline, "", "\"player_uuid\": \""+request.ID+"\"")
-
-		c.JSON(200, gin.H{"message": "TODO"})
-		return nil;
-	} else if request.Mode == "" {
-		c.JSON(200, gin.H{"message": "TODO"})
-		return nil;
 	}
 
 	initialProject := `

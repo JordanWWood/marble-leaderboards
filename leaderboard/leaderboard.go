@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"strconv"
+	"strings"
 )
 
 type leaderboardRequest struct {
@@ -144,16 +145,30 @@ func leaderboardHandler(r *gin.Context) []byte {
 
 		sort := ""
 		if request.Filter != "" {
+			filters := strings.Split(request.Filter, ",")
 			sort = `{ 
             	"$sort" : {
-                	"scores.%s" : -1.0
+                	%s
             	}
         	},`
+			sortTemplate := ``
 
-			sort = fmt.Sprintf(sort, request.Filter)
+			for i, filter := range filters {
+				if (strings.HasPrefix(filter, "-")) {
+					sortTemplate += "\"scores." + filter[1:] + "\" : 1.0"
+				} else {
+					sortTemplate += "\"scores." + filter + "\" : -1.0"
+				}
+
+				if (i+1 != len(filters)) {
+					sortTemplate += ","
+				}
+			}
+			sort = fmt.Sprintf(sort, sortTemplate)
 		}
 
 		pipeline = fmt.Sprintf(pipeline, match, sort, (page*length)-length, length)
+		fmt.Println(pipeline)
 
 		collection = Client.Database("Analytics").Collection("Events")
 		opts := options.Aggregate()
