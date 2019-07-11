@@ -168,7 +168,6 @@ func leaderboardHandler(r *gin.Context) []byte {
 		}
 
 		pipeline = fmt.Sprintf(pipeline, match, sort, (page*length)-length, length)
-		fmt.Println(pipeline)
 
 		collection = Client.Database("Analytics").Collection("Events")
 		opts := options.Aggregate()
