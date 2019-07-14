@@ -11,6 +11,8 @@ import (
 type MongoResult struct {
 	TimeCode          int64             `bson:"time_code"`
 	ServerEventType   string            `bson:"server_event_type"`
+	GameID            string            `bson:"game_id"`
+	GameModeID        string            `bson:"game_mode_id"`
 	AnalyticEventType string            `bson:"analytic_event_type"`
 	WorldName         string            `bson:"world_name"`
 	From              string            `bson:"from"`
@@ -52,4 +54,3 @@ func RunPipelineOnEvents(pipeline string, client *mongo.Client, ctx *gin.Context
 		action(result)
 	}
 }
-

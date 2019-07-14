@@ -12,14 +12,11 @@ import (
 type userRequest struct {
 	ID   string `uri:"id" binding:"uuid"`
 	Game string `uri:"game" binding:"uuid"`
-	Mode string `uri:"mode" binding:"uuid"`
 }
 
 type gameModeUserResponse struct {
 	Name        string
-	Wins        int64
-	Losses      int64
-	EventTotals map[string]int64
+	EventTotals map[string]map[string]map[string]int64
 }
 
 var Client *mongo.Client
@@ -49,6 +46,8 @@ func userHandler(c *gin.Context) []byte {
 		}, 
 		{ 
 			"$project" : {
+				"game_id" : 1.0,
+				"game_mode_id" : 1.0,
 				"server_event_type" : 1.0,
 				"world_name": 1.0,
 				"analytic_event_type" : 1.0, 
@@ -89,13 +88,12 @@ func userHandler(c *gin.Context) []byte {
 	pipelineText := `
         $or: [{player_uuid: "%s"},{killer_uuid: "%s"}],
 	    game_id: "%s",
-        game_mode_id: "%s"
 	`
-	pipelineText = fmt.Sprintf(pipelineText, request.ID, request.ID, request.Game, request.Mode)
+	pipelineText = fmt.Sprintf(pipelineText, request.ID, request.ID, request.Game)
 	pipeline = fmt.Sprintf(pipeline, initialProject, pipelineText)
 
 	var gameModeUserResponse gameModeUserResponse
-	gameModeUserResponse.EventTotals = make(map[string]int64)
+	gameModeUserResponse.EventTotals = make(map[string]map[string]map[string]int64)
 	util.RunPipelineOnEvents(pipeline, Client, c, func(result util.MongoResult) {
 		if gameModeUserResponse.Name == "" {
 			if result.PlayerUUID == request.ID {
@@ -107,22 +105,27 @@ func userHandler(c *gin.Context) []byte {
 
 		if result.AnalyticEventType == "Death" {
 			if result.PlayerUUID == request.ID {
-				gameModeUserResponse.EventTotals["Deaths"]++
+				if (gameModeUserResponse.EventTotals[result.GameID] == nil) {
+					gameModeUserResponse.EventTotals[result.GameID] = make(map[string]map[string]int64)
+				}
+				if (gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] == nil) {
+					gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] =  make(map[string]int64)
+				}
+
+				gameModeUserResponse.EventTotals[result.GameID][result.GameModeID]["Deaths"]++
 			} else {
-				gameModeUserResponse.EventTotals["Kills"]++
+				gameModeUserResponse.EventTotals[result.GameID][result.GameModeID]["Kills"]++
 			}
 		}
 
 		if result.AnalyticEventType == "Score" {
-			gameModeUserResponse.EventTotals[result.ScoreField] += int64(result.Value)
-		}
-
-		if result.AnalyticEventType == "Finish" {
-			if _, ok := result.Winners[request.ID]; ok {
-				gameModeUserResponse.Wins++
-			} else {
-				gameModeUserResponse.Losses++
+			if (gameModeUserResponse.EventTotals[result.GameID] == nil) {
+				gameModeUserResponse.EventTotals[result.GameID] = make(map[string]map[string]int64)
 			}
+			if (gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] == nil) {
+				gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] =  make(map[string]int64)
+			}
+			gameModeUserResponse.EventTotals[result.GameID][result.GameModeID][result.ScoreField] += int64(result.Value)
 		}
 	})
 
