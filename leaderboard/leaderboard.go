@@ -117,14 +117,14 @@ func leaderboardHandler(r *gin.Context) []byte {
     	]`
 
 		match := `
-		{ 
-			"$match" : {
-				%s
-				%s
-				%s
-				"analytic_event_type" : "Score"
-			}
-		}, `
+			{ 
+				"$match" : {
+					%s
+					%s
+					%s
+					"analytic_event_type" : "Score"
+				}
+			}, `
 
 		instanceMatch := ""
 		if request.Instance != "" {
@@ -146,17 +146,32 @@ func leaderboardHandler(r *gin.Context) []byte {
 		sort := ""
 		if request.Filter != "" {
 			filters := strings.Split(request.Filter, ",")
-			sort = `{ 
+			sort = `
+			{
+				"$match" : {
+					%s
+				}
+			},
+			{ 
             	"$sort" : {
                 	%s
             	}
         	},`
 			sortTemplate := ``
+			matchTemplate := ``
 
 			for i, filter := range filters {
-				if (strings.HasPrefix(filter, "-")) {
+				if strings.HasPrefix(filter, "-") {
+					if i == 0 {
+						matchTemplate += "\"scores." + filter[1:] + "\" : { \"$exists\" : true, \"$ne\" : null }"
+					}
+
 					sortTemplate += "\"scores." + filter[1:] + "\" : 1.0"
 				} else {
+					if i == 0 {
+						matchTemplate += "\"scores." + filter + "\" : { \"$exists\" : true, \"$ne\" : null }"
+					}
+
 					sortTemplate += "\"scores." + filter + "\" : -1.0"
 				}
 
@@ -164,7 +179,7 @@ func leaderboardHandler(r *gin.Context) []byte {
 					sortTemplate += ","
 				}
 			}
-			sort = fmt.Sprintf(sort, sortTemplate)
+			sort = fmt.Sprintf(sort, matchTemplate, sortTemplate)
 		}
 
 		pipeline = fmt.Sprintf(pipeline, match, sort, (page*length)-length, length)
