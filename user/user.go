@@ -16,7 +16,7 @@ type userRequest struct {
 
 type gameModeUserResponse struct {
 	Name        string
-	EventTotals map[string]map[string]map[string]int64
+	EventTotals map[string]map[string]map[string]int32
 }
 
 var Client *mongo.Client
@@ -38,62 +38,52 @@ func userHandler(c *gin.Context) []byte {
 
 	pipeline := `
 	[
-		%s
-        {
-			"$match" : {
-				%s
-			}
-		}, 
-		{ 
-			"$project" : {
-				"game_id" : 1.0,
-				"game_mode_id" : 1.0,
-				"server_event_type" : 1.0,
-				"world_name": 1.0,
-				"analytic_event_type" : 1.0, 
-				"from" : 1.0, 
-				"to" : 1.0, 
-				"value" : 1.0, 
-				"score_field" : 1.0, 
-				"player_name" : 1.0, 
-				"player_uuid" : 1.0, 
-				"death_event_type" : 1.0, 
-				"death_details" : 1.0, 
-				"killer_name" : 1.0, 
-				"killer_uuid" : 1.0, 
-				"winners" : 1.0, 
-				"losers" : 1.0, 
-				"finish_event_type" : 1.0
-			}
-	}]`
+        { 
+            "$match" : {
+                "$or" : [
+                    {
+                        "player_uuid" : "%s"
+                    }, 
+                    {
+                        "killer_uuid" : "%s"
+                    }
+                ], 
+                "game_id" : "%s"
+            }
+        }, 
+        { 
+            "$project" : {
+                "game_id" : 1.0, 
+                "game_mode_id" : 1.0, 
+                "server_event_type" : 1.0, 
+                "world_name" : 1.0, 
+                "analytic_event_type" : 1.0, 
+                "from" : 1.0, 
+                "to" : 1.0, 
+                "value" : 1.0, 
+                "score_field" : 1.0, 
+                "player_name" : 1.0, 
+                "player_uuid" : 1.0, 
+                "death_event_type" : 1.0, 
+                "death_details" : 1.0, 
+                "killer_name" : 1.0, 
+                "killer_uuid" : 1.0, 
+                "winners" : 1.0, 
+                "losers" : 1.0, 
+                "finish_event_type" : 1.0
+            }
+        }
+    ]`
 
 	if request.ID == "" {
 		c.JSON(400, gin.H{"error": "No user provided"})
 	}
 
-	initialProject := `
-        { 
-            "$project" : {
-                "winners" : {
-                    "$objectToArray" : "$winners"
-                }, 
-                "losers" : {
-                    "$objectToArray" : "$losers"
-                }, 
-                "doc" : "$$ROOT"
-            }
-        },
-    `
-
-	pipelineText := `
-        $or: [{player_uuid: "%s"},{killer_uuid: "%s"}],
-	    game_id: "%s",
-	`
-	pipelineText = fmt.Sprintf(pipelineText, request.ID, request.ID, request.Game)
-	pipeline = fmt.Sprintf(pipeline, initialProject, pipelineText)
+	pipeline = fmt.Sprintf(pipeline,  request.ID, request.ID, request.Game)
+	log.Println(pipeline)
 
 	var gameModeUserResponse gameModeUserResponse
-	gameModeUserResponse.EventTotals = make(map[string]map[string]map[string]int64)
+	gameModeUserResponse.EventTotals = make(map[string]map[string]map[string]int32)
 	util.RunPipelineOnEvents(pipeline, Client, c, func(result util.MongoResult) {
 		if gameModeUserResponse.Name == "" {
 			if result.PlayerUUID == request.ID {
@@ -106,10 +96,10 @@ func userHandler(c *gin.Context) []byte {
 		if result.AnalyticEventType == "Death" {
 			if result.PlayerUUID == request.ID {
 				if (gameModeUserResponse.EventTotals[result.GameID] == nil) {
-					gameModeUserResponse.EventTotals[result.GameID] = make(map[string]map[string]int64)
+					gameModeUserResponse.EventTotals[result.GameID] = make(map[string]map[string]int32)
 				}
 				if (gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] == nil) {
-					gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] =  make(map[string]int64)
+					gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] =  make(map[string]int32)
 				}
 
 				gameModeUserResponse.EventTotals[result.GameID][result.GameModeID]["Deaths"]++
@@ -120,12 +110,12 @@ func userHandler(c *gin.Context) []byte {
 
 		if result.AnalyticEventType == "Score" {
 			if (gameModeUserResponse.EventTotals[result.GameID] == nil) {
-				gameModeUserResponse.EventTotals[result.GameID] = make(map[string]map[string]int64)
+				gameModeUserResponse.EventTotals[result.GameID] = make(map[string]map[string]int32)
 			}
 			if (gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] == nil) {
-				gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] =  make(map[string]int64)
+				gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] =  make(map[string]int32)
 			}
-			gameModeUserResponse.EventTotals[result.GameID][result.GameModeID][result.ScoreField] += int64(result.Value)
+			gameModeUserResponse.EventTotals[result.GameID][result.GameModeID][result.ScoreField] += int32(result.Value)
 		}
 	})
 
