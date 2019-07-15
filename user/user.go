@@ -11,7 +11,8 @@ import (
 
 type userRequest struct {
 	ID   string `uri:"id" binding:"uuid"`
-	Game string `uri:"game" binding:"uuid"`
+	Game string `uri:"game" binding:""`
+	Mode string `uri:"mode" binding:""`
 }
 
 type gameModeUserResponse struct {
@@ -27,6 +28,7 @@ func Register(r *gin.Engine, client *mongo.Client) {
 	util.CachedGET(r, "/user", userHandler)
 	util.CachedGET(r, "/user/profile/:id", userHandler)
 	util.CachedGET(r, "/user/profile/:id/:game", userHandler)
+	util.CachedGET(r, "/user/profile/:id/:game/:mode", userHandler)
 }
 
 func userHandler(c *gin.Context) []byte {
@@ -47,8 +49,8 @@ func userHandler(c *gin.Context) []byte {
                     {
                         "killer_uuid" : "%s"
                     }
-                ], 
-                "game_id" : "%s"
+                ]
+				%s
             }
         }, 
         { 
@@ -79,7 +81,17 @@ func userHandler(c *gin.Context) []byte {
 		c.JSON(400, gin.H{"error": "No user provided"})
 	}
 
-	pipeline = fmt.Sprintf(pipeline,  request.ID, request.ID, request.Game)
+	matchGame := ``
+
+	if (request.Game != "") {
+		matchGame += ", \"game_id\" : \"" + request.Game + "\""
+	}
+
+	if request.Mode != "" {
+		matchGame += ", \"game_mode_id\" : \"" + request.Mode + "\""
+	}
+
+	pipeline = fmt.Sprintf(pipeline, request.ID, "TODO" , request.ID, request.Game)
 	log.Println(pipeline)
 
 	var gameModeUserResponse gameModeUserResponse
