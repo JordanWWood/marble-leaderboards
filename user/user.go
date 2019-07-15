@@ -91,7 +91,7 @@ func userHandler(c *gin.Context) []byte {
 		matchGame += ", \"game_mode_id\" : \"" + request.Mode + "\""
 	}
 
-	pipeline = fmt.Sprintf(pipeline, request.ID, request.ID, matchGame, request.Game)
+	pipeline = fmt.Sprintf(pipeline, request.ID, request.ID, matchGame)
 
 	var gameModeUserResponse gameModeUserResponse
 	gameModeUserResponse.EventTotals = make(map[string]map[string]map[string]int64)
