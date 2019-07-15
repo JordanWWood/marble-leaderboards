@@ -17,7 +17,7 @@ type userRequest struct {
 
 type gameModeUserResponse struct {
 	Name        string
-	EventTotals map[string]map[string]map[string]int32
+	EventTotals map[string]map[string]map[string]int64
 }
 
 var Client *mongo.Client
@@ -95,7 +95,7 @@ func userHandler(c *gin.Context) []byte {
 	log.Println(pipeline)
 
 	var gameModeUserResponse gameModeUserResponse
-	gameModeUserResponse.EventTotals = make(map[string]map[string]map[string]int32)
+	gameModeUserResponse.EventTotals = make(map[string]map[string]map[string]int64)
 	util.RunPipelineOnEvents(pipeline, Client, c, func(result util.MongoResult) {
 		if gameModeUserResponse.Name == "" {
 			if result.PlayerUUID == request.ID {
@@ -108,10 +108,10 @@ func userHandler(c *gin.Context) []byte {
 		if result.AnalyticEventType == "Death" {
 			if result.PlayerUUID == request.ID {
 				if (gameModeUserResponse.EventTotals[result.GameID] == nil) {
-					gameModeUserResponse.EventTotals[result.GameID] = make(map[string]map[string]int32)
+					gameModeUserResponse.EventTotals[result.GameID] = make(map[string]map[string]int64)
 				}
 				if (gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] == nil) {
-					gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] =  make(map[string]int32)
+					gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] =  make(map[string]int64)
 				}
 
 				gameModeUserResponse.EventTotals[result.GameID][result.GameModeID]["Deaths"]++
@@ -122,12 +122,12 @@ func userHandler(c *gin.Context) []byte {
 
 		if result.AnalyticEventType == "Score" {
 			if (gameModeUserResponse.EventTotals[result.GameID] == nil) {
-				gameModeUserResponse.EventTotals[result.GameID] = make(map[string]map[string]int32)
+				gameModeUserResponse.EventTotals[result.GameID] = make(map[string]map[string]int64)
 			}
 			if (gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] == nil) {
-				gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] =  make(map[string]int32)
+				gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] =  make(map[string]int64)
 			}
-			gameModeUserResponse.EventTotals[result.GameID][result.GameModeID][result.ScoreField] += int32(result.Value)
+			gameModeUserResponse.EventTotals[result.GameID][result.GameModeID][result.ScoreField] += int64(result.Value)
 		}
 	})
 
