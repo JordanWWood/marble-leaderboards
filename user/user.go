@@ -92,7 +92,6 @@ func userHandler(c *gin.Context) []byte {
 	}
 
 	pipeline = fmt.Sprintf(pipeline, request.ID, "TODO" , request.ID, request.Game)
-	log.Println(pipeline)
 
 	var gameModeUserResponse gameModeUserResponse
 	gameModeUserResponse.EventTotals = make(map[string]map[string]map[string]int64)
@@ -114,9 +113,9 @@ func userHandler(c *gin.Context) []byte {
 					gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] =  make(map[string]int64)
 				}
 
-				gameModeUserResponse.EventTotals[result.GameID][result.GameModeID]["Deaths"]++
+				gameModeUserResponse.EventTotals[result.GameID][result.GameModeID]["deaths"]++
 			} else {
-				gameModeUserResponse.EventTotals[result.GameID][result.GameModeID]["Kills"]++
+				gameModeUserResponse.EventTotals[result.GameID][result.GameModeID]["kills"]++
 			}
 		}
 
