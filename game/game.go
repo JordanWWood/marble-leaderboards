@@ -47,9 +47,18 @@ type death struct {
 	Time       int64
 }
 
+type gamesResult struct {
+	Game      interface{} `bson:"_id"`
+	GameModes [] string   `bson:"gamemodes"`
+}
+
 type gameListResult struct {
-	Game interface{} `bson:"_id"`
-	GameModes [] string `bson:"gamemodes"`
+	GameID     string            `bson:"game_id"`
+	GameModeID string            `bson:"game_mode_id"`
+	InstanceID string            `bson:"instance_id"`
+	Winners    map[string]string `bson:"winners"`
+	Losers     map[string]string `bson:"losers"`
+	EndTime    int64               `bson:"end_time"`
 }
 
 var Client *mongo.Client
@@ -57,7 +66,7 @@ var Client *mongo.Client
 func Register(r *gin.Engine, client *mongo.Client) {
 	Client = client
 
-	util.CachedGET(r, "/game/list", gameListHandler)
+	util.CachedGET(r, "/games", gamesHandler)
 	util.CachedGET(r, "/game/list/:game", gameListHandler)
 	util.CachedGET(r, "/game/list/:game/:mode", gameListHandler)
 	util.CachedGET(r, "/game/instance/:id", instanceHandler)
@@ -75,15 +84,47 @@ func gameListHandler(c *gin.Context) []byte {
 	}
 
 	pipeline := `[
+		{
+			"$match" : {
+				"analytic_event_type": "Finish",
+				%s
+			}
+		},
         { 
             "$group" : {
-                "_id" : "$game_id",
-                "gamemodes" : {
-                    "$addToSet" : "$game_mode_id"
+                "_id" : {
+                    "game_id" : "$game_id", 
+                    "game_mode_id" : "$game_mode_id", 
+                    "instance_id" : "$instance_id", 
+                    "winners" : "$winners", 
+                    "losers" : "$losers", 
+                    "end_time" : "$time_code"
                 }
+            }
+        }, 
+        { 
+            "$replaceRoot" : {
+                "newRoot" : "$_id"
+            }
+        }, 
+        { 
+            "$sort" : {
+                "end_time" : -1.0
             }
         }
     ]`
+
+	match := ``
+	if request.Game != "" {
+		match += "\"game_id\" : \""+ request.Game + "\" "
+
+		if request.Mode != "" {
+			match += ",\"game_mode_id\": \"" + request.Mode + "\""
+		}
+	}
+
+	pipeline = fmt.Sprintf(pipeline, match)
+
 	collection = Client.Database("Analytics").Collection("Events")
 	opts := options.Aggregate()
 	opts.SetAllowDiskUse(true)
@@ -94,6 +135,50 @@ func gameListHandler(c *gin.Context) []byte {
 	var results [] gameListResult
 	for cur.Next(c) {
 		var result gameListResult
+		err := cur.Decode(&result)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		results = append(results, result)
+	}
+
+	json, err := json2.MarshalIndent(results, "", "    ")
+	if err != nil {
+		log.Fatal(err)
+		return nil
+	}
+
+	return json
+}
+
+func gamesHandler(c *gin.Context) []byte {
+	var err error
+	var collection *mongo.Collection
+	var cur *mongo.Cursor
+
+	pipeline := `[
+		%s
+		{
+            "$group" : {
+                "_id" : "$game_id",
+                "gamemodes" : {
+                    "$addToSet" : "$game_mode_id"
+                }
+            }
+        }
+    ]`
+
+	collection = Client.Database("Analytics").Collection("Events")
+	opts := options.Aggregate()
+	opts.SetAllowDiskUse(true)
+	if cur, err = collection.Aggregate(c, mdb.MongoPipeline(pipeline), opts); err != nil {
+		log.Fatal(err)
+	}
+
+	var results [] gamesResult
+	for cur.Next(c) {
+		var result gamesResult
 		err := cur.Decode(&result)
 		if err != nil {
 			log.Fatal(err)
@@ -150,7 +235,6 @@ func instanceHandler(c *gin.Context) []byte {
 			}
 	}]`
 	pipeline = fmt.Sprintf(pipeline, request.ID)
-
 
 	var fullGameResponse fullGameResponse
 
