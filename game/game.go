@@ -57,9 +57,9 @@ var Client *mongo.Client
 func Register(r *gin.Engine, client *mongo.Client) {
 	Client = client
 
-	util.CachedGET(r, "/games", gameListHandler)
-	util.CachedGET(r, "/game/list/:game", gameHandler)
-	util.CachedGET(r, "/game/list/:game/:mode", gameHandler)
+	util.CachedGET(r, "/game/list", gameListHandler)
+	util.CachedGET(r, "/game/list/:game", gameListHandler)
+	util.CachedGET(r, "/game/list/:game/:mode", gameListHandler)
 	util.CachedGET(r, "/game/instance/:id", instanceHandler)
 }
 
@@ -67,6 +67,12 @@ func gameListHandler(c *gin.Context) []byte {
 	var err error
 	var collection *mongo.Collection
 	var cur *mongo.Cursor
+
+	var request gameRequest
+	if err := c.ShouldBindUri(&request); err != nil {
+		c.JSON(400, gin.H{"error": err})
+		return nil
+	}
 
 	pipeline := `[
         { 
@@ -191,24 +197,4 @@ func instanceHandler(c *gin.Context) []byte {
 		return nil
 	}
 	return json
-}
-
-func gameHandler(c *gin.Context) []byte {
-	var request gameRequest
-	if err := c.ShouldBindUri(&request); err != nil {
-		c.JSON(400, gin.H{"error": err})
-		return nil
-	}
-
-	if request.Game == "" {
-		c.JSON(200, gin.H{"message": "TODO"})
-		return nil
-	} else if request.Mode == "" {
-		c.JSON(200, gin.H{"message": "TODO"})
-		return nil
-	}
-
-	c.JSON(200, gin.H{"message": "TODO"})
-
-	return nil
 }

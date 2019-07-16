@@ -21,7 +21,8 @@ type leaderboardRequest struct {
 }
 
 type mongoResult struct {
-	ID     string           `bson:"_id"`
+	ID     string           `bson:"uuid"`
+	Name   string           `bson:"name"`
 	Scores map[string]int32 `bson:"scores"`
 }
 
@@ -63,7 +64,8 @@ func leaderboardHandler(r *gin.Context) []byte {
 				"$project" : {
 					"value" : 1.0, 
 					"score_field" : 1.0, 
-					"player_uuid" : 1.0, 
+					"player_uuid" : 1.0,
+					"player_name" : 1.0, 
 					"winners" : 1.0, 
 					"losers" : 1.0
 				}
@@ -72,6 +74,7 @@ func leaderboardHandler(r *gin.Context) []byte {
 				"$group" : {
 					"_id" : {
 						"uuid" : "$player_uuid", 
+						"name" : "$player_name", 
 						"score" : "$score_field"
 					}, 
 					"value" : {
@@ -81,7 +84,10 @@ func leaderboardHandler(r *gin.Context) []byte {
 			}, 
 			{ 
 				"$group" : {
-					"_id" : "$_id.uuid", 
+					"_id" : { 
+						"uuid" : "$_id.uuid", 
+						"name" : "$_id.name" 
+					}, 
 					"scores" : {
 						"$push" : {
 							"score" : "$_id.score", 
@@ -92,7 +98,8 @@ func leaderboardHandler(r *gin.Context) []byte {
 			}, 
 			{ 
 				"$project" : {
-					"_id" : 1.0, 
+					"uuid": "$_id.uuid",
+    				"name": "$_id.name", 
 					"scores" : {
 						"$arrayToObject" : {
 							"$map" : {

@@ -37,6 +37,16 @@ func CachedGET(r *gin.Engine, path string, action func(*gin.Context) []byte) {
 			}
 		}
 
+		i := 0;
+		for k, v := range c.Request.URL.Query() {
+			key += fmt.Sprint(".", k, ".")
+			for _, val := range v {
+				key += val
+			}
+
+			i++;
+		}
+
 		val, err := client.Get(key).Result()
 		if err != nil {
 			response := action(c)
