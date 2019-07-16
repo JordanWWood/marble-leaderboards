@@ -95,7 +95,7 @@ func gameListHandler(c *gin.Context) []byte {
 	pipeline := `[
 		{
 			"$match" : {
-				"analytic_event_type": "Finish",
+				"analytic_event_type": "Finish"
 				%s
 			}
 		},
@@ -131,7 +131,7 @@ func gameListHandler(c *gin.Context) []byte {
 
 	match := ``
 	if request.Game != "" {
-		match += "\"game_id\" : \""+ request.Game + "\" "
+		match += ",\"game_id\" : \""+ request.Game + "\" "
 
 		if request.Mode != "" {
 			match += ",\"game_mode_id\": \"" + request.Mode + "\""
@@ -139,6 +139,7 @@ func gameListHandler(c *gin.Context) []byte {
 	}
 
 	pipeline = fmt.Sprintf(pipeline, match, (page*length)-length, length)
+	log.Println(pipeline)
 
 	collection = Client.Database("Analytics").Collection("Events")
 	opts := options.Aggregate()
