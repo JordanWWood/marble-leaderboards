@@ -68,6 +68,7 @@ func Register(r *gin.Engine, client *mongo.Client) {
 	Client = client
 
 	util.CachedGET(r, "/games", gamesHandler)
+	util.CachedGET(r, "/game/list", gameListHandler)
 	util.CachedGET(r, "/game/list/:game", gameListHandler)
 	util.CachedGET(r, "/game/list/:game/:mode", gameListHandler)
 	util.CachedGET(r, "/game/instance/:id", instanceHandler)
