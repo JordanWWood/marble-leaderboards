@@ -121,10 +121,10 @@ func gameListHandler(c *gin.Context) []byte {
             }
         },
 		{
-			"$skip": %s
+			"$skip": %d
 		},
 		{
-			"$limit": %s
+			"$limit": %d
 		}
     ]`
 
