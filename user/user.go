@@ -110,7 +110,7 @@ func userHandler(c *gin.Context) []byte {
 					gameModeUserResponse.EventTotals[result.GameID] = make(map[string]map[string]int64)
 				}
 				if (gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] == nil) {
-					gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] =  make(map[string]int64)
+					gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] = make(map[string]int64)
 				}
 
 				gameModeUserResponse.EventTotals[result.GameID][result.GameModeID]["deaths"]++
@@ -124,7 +124,7 @@ func userHandler(c *gin.Context) []byte {
 				gameModeUserResponse.EventTotals[result.GameID] = make(map[string]map[string]int64)
 			}
 			if (gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] == nil) {
-				gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] =  make(map[string]int64)
+				gameModeUserResponse.EventTotals[result.GameID][result.GameModeID] = make(map[string]int64)
 			}
 			gameModeUserResponse.EventTotals[result.GameID][result.GameModeID][result.ScoreField] += int64(result.Value)
 		}

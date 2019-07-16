@@ -18,12 +18,14 @@ type leaderboardRequest struct {
 	Mode     string `uri:"mode" binding:""`
 	Filter   string `uri:"filter" binding:""`
 	Instance string `uri:"instance" binding:""`
+	User     string `uri:"user" binding:""`
 }
 
 type mongoResult struct {
-	ID     string           `bson:"uuid"`
-	Name   string           `bson:"name"`
-	Scores map[string]int32 `bson:"scores"`
+	ID       string           `bson:"uuid"`
+	Name     string           `bson:"name"`
+	Scores   map[string]int32 `bson:"scores"`
+	Position int32            `bson:"position"`
 }
 
 var Client *mongo.Client
@@ -35,7 +37,8 @@ func Register(r *gin.Engine, client *mongo.Client) {
 	util.CachedGET(r, "/leaderboard/:game", leaderboardHandler)
 	util.CachedGET(r, "/leaderboard/:game/:mode", leaderboardHandler)
 	util.CachedGET(r, "/leaderboard/:game/:mode/:filter", leaderboardHandler)
-	util.CachedGET(r, "/leaderboard/:game/:mode/:filter/:instance", leaderboardHandler)
+	util.CachedGET(r, "/leaderboard/:game/:mode/:filter/user/:user", leaderboardHandler)
+	util.CachedGET(r, "/leaderboard/:game/:mode/:filter/instance/:instance", leaderboardHandler)
 }
 
 func leaderboardHandler(r *gin.Context) []byte {
@@ -115,6 +118,7 @@ func leaderboardHandler(r *gin.Context) []byte {
 				}
 			},
  			%s
+			%s
         	{ 
             	"$skip" : %d
         	}, 
@@ -189,7 +193,38 @@ func leaderboardHandler(r *gin.Context) []byte {
 			sort = fmt.Sprintf(sort, matchTemplate, sortTemplate)
 		}
 
-		pipeline = fmt.Sprintf(pipeline, match, sort, (page*length)-length, length)
+		userStages := ``
+		if request.User != "" {
+			userStages += `{ 
+				"$group" : {
+					"_id" : null, 
+					"items" : {
+						"$push" : "$$ROOT"
+					}
+				}
+			}, 
+			{ 
+				"$unwind" : {
+					"path" : "$items", 
+					"includeArrayIndex" : "items.position", 
+					"preserveNullAndEmptyArrays" : false
+				}
+			}, 
+			{ 
+				"$replaceRoot" : {
+					"newRoot" : "$items"
+				}
+			}, 
+			{ 
+				"$match" : {
+					"uuid" : "%s"
+				}
+			},`
+
+			userStages = fmt.Sprintf(userStages, request.User)
+		}
+
+		pipeline = fmt.Sprintf(pipeline, match, sort, userStages, (page*length)-length, length)
 
 		collection = Client.Database("Analytics").Collection("Events")
 		opts := options.Aggregate()
@@ -205,6 +240,7 @@ func leaderboardHandler(r *gin.Context) []byte {
 			if err != nil {
 				log.Fatal(err)
 			}
+			result.Position++
 
 			results = append(results, result)
 		}

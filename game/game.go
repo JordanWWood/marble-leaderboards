@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
+	"strconv"
 )
 
 type gameRequest struct {
@@ -83,6 +84,13 @@ func gameListHandler(c *gin.Context) []byte {
 		return nil
 	}
 
+	page, err := strconv.Atoi(c.Query("page"))
+	length, err := strconv.Atoi(c.Query("length"))
+	if err != nil {
+		page = 1
+		length = 100
+	}
+
 	pipeline := `[
 		{
 			"$match" : {
@@ -111,7 +119,13 @@ func gameListHandler(c *gin.Context) []byte {
             "$sort" : {
                 "end_time" : -1.0
             }
-        }
+        },
+		{
+			"$skip": %s
+		},
+		{
+			"$limit": %s
+		}
     ]`
 
 	match := ``
@@ -123,7 +137,7 @@ func gameListHandler(c *gin.Context) []byte {
 		}
 	}
 
-	pipeline = fmt.Sprintf(pipeline, match)
+	pipeline = fmt.Sprintf(pipeline, match, (page*length)-length, length)
 
 	collection = Client.Database("Analytics").Collection("Events")
 	opts := options.Aggregate()
