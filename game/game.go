@@ -59,7 +59,7 @@ type gameListResult struct {
 	InstanceID string            `bson:"instance_id"`
 	Winners    map[string]string `bson:"winners"`
 	Losers     map[string]string `bson:"losers"`
-	EndTime    int64               `bson:"end_time"`
+	EndTime    int64             `bson:"end_time"`
 }
 
 var Client *mongo.Client
@@ -131,7 +131,7 @@ func gameListHandler(c *gin.Context) []byte {
 
 	match := ``
 	if request.Game != "" {
-		match += ",\"game_id\" : \""+ request.Game + "\" "
+		match += ",\"game_id\" : \"" + request.Game + "\" "
 
 		if request.Mode != "" {
 			match += ",\"game_mode_id\": \"" + request.Mode + "\""
@@ -153,7 +153,8 @@ func gameListHandler(c *gin.Context) []byte {
 		var result gameListResult
 		err := cur.Decode(&result)
 		if err != nil {
-			log.Fatal(err)
+			c.JSON(500, gin.H{ "error": err })
+			return nil
 		}
 
 		results = append(results, result)
@@ -161,7 +162,7 @@ func gameListHandler(c *gin.Context) []byte {
 
 	json, err := json2.MarshalIndent(results, "", "    ")
 	if err != nil {
-		log.Fatal(err)
+		c.JSON(500, gin.H{ "error": err })
 		return nil
 	}
 
@@ -189,7 +190,8 @@ func gamesHandler(c *gin.Context) []byte {
 	opts := options.Aggregate()
 	opts.SetAllowDiskUse(true)
 	if cur, err = collection.Aggregate(c, mdb.MongoPipeline(pipeline), opts); err != nil {
-		log.Fatal(err)
+		c.JSON(500, gin.H{ "error": err })
+		return nil
 	}
 
 	var results [] gamesResult
@@ -207,7 +209,7 @@ func gamesHandler(c *gin.Context) []byte {
 
 	json, err := json2.MarshalIndent(results, "", "    ")
 	if err != nil {
-		log.Fatal(err)
+		c.JSON(500, gin.H{ "error": err })
 		return nil
 	}
 
@@ -293,7 +295,7 @@ func instanceHandler(c *gin.Context) []byte {
 
 	json, err := json2.MarshalIndent(fullGameResponse, "", "    ")
 	if err != nil {
-		log.Fatal(err)
+		c.JSON(500, gin.H{ "err": err })
 		return nil
 	}
 	return json

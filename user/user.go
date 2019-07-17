@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
-	"log"
 )
 
 type userRequest struct {
@@ -132,7 +131,7 @@ func userHandler(c *gin.Context) []byte {
 
 	json, err := json2.MarshalIndent(gameModeUserResponse, "", "    ")
 	if err != nil {
-		log.Fatal(err)
+		c.JSON(500, gin.H{ "err": err })
 		return nil
 	}
 	return json

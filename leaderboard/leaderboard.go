@@ -231,7 +231,8 @@ func leaderboardHandler(r *gin.Context) []byte {
 		opts := options.Aggregate()
 		opts.SetAllowDiskUse(true)
 		if cur, err = collection.Aggregate(r, mdb.MongoPipeline(pipeline), opts); err != nil {
-			log.Fatal(err)
+			r.JSON(500, gin.H{ "err": err })
+			return nil
 		}
 
 		var results [] mongoResult
@@ -239,7 +240,8 @@ func leaderboardHandler(r *gin.Context) []byte {
 			var result mongoResult
 			err := cur.Decode(&result)
 			if err != nil {
-				log.Fatal(err)
+				r.JSON(500, gin.H{ "err": err })
+				return nil
 			}
 			result.Position++
 
