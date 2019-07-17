@@ -139,7 +139,6 @@ func gameListHandler(c *gin.Context) []byte {
 	}
 
 	pipeline = fmt.Sprintf(pipeline, match, (page*length)-length, length)
-	log.Println(pipeline)
 
 	collection = Client.Database("Analytics").Collection("Events")
 	opts := options.Aggregate()
