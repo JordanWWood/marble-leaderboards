@@ -23,6 +23,7 @@ type instanceRequest struct {
 
 type fullGameResponse struct {
 	Map       string
+	MapAuthor string
 	StartTime int64
 	EndTime   int64
 	Winners   map[string]string
@@ -152,7 +153,7 @@ func gameListHandler(c *gin.Context) []byte {
 		var result gameListResult
 		err := cur.Decode(&result)
 		if err != nil {
-			c.JSON(500, gin.H{ "error": err })
+			c.JSON(500, gin.H{"error": err})
 			return nil
 		}
 
@@ -161,7 +162,7 @@ func gameListHandler(c *gin.Context) []byte {
 
 	json, err := json2.MarshalIndent(results, "", "    ")
 	if err != nil {
-		c.JSON(500, gin.H{ "error": err })
+		c.JSON(500, gin.H{"error": err})
 		return nil
 	}
 
@@ -189,7 +190,7 @@ func gamesHandler(c *gin.Context) []byte {
 	opts := options.Aggregate()
 	opts.SetAllowDiskUse(true)
 	if cur, err = collection.Aggregate(c, mdb.MongoPipeline(pipeline), opts); err != nil {
-		c.JSON(500, gin.H{ "error": err })
+		c.JSON(500, gin.H{"error": err})
 		return nil
 	}
 
@@ -208,7 +209,7 @@ func gamesHandler(c *gin.Context) []byte {
 
 	json, err := json2.MarshalIndent(results, "", "    ")
 	if err != nil {
-		c.JSON(500, gin.H{ "error": err })
+		c.JSON(500, gin.H{"error": err})
 		return nil
 	}
 
@@ -249,6 +250,7 @@ func instanceHandler(c *gin.Context) []byte {
 				"winners" : 1.0, 
 				"losers" : 1.0, 
 				"finish_event_type" : 1.0
+				"author" : 1.0
 			}
 	}]`
 	pipeline = fmt.Sprintf(pipeline, request.ID)
@@ -279,7 +281,7 @@ func instanceHandler(c *gin.Context) []byte {
 		}
 
 		if result.ServerEventType == "Game" && result.AnalyticEventType == "GameInformation" {
-			log.Println(result)
+			fullGameResponse.MapAuthor = result.Author
 			fullGameResponse.Map = result.WorldName
 		}
 
@@ -299,7 +301,7 @@ func instanceHandler(c *gin.Context) []byte {
 
 	json, err := json2.MarshalIndent(fullGameResponse, "", "    ")
 	if err != nil {
-		c.JSON(500, gin.H{ "err": err })
+		c.JSON(500, gin.H{"err": err})
 		return nil
 	}
 	return json
