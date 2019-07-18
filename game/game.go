@@ -217,8 +217,8 @@ func gamesHandler(c *gin.Context) []byte {
 
 func instanceHandler(c *gin.Context) []byte {
 	var err error
-
 	var request instanceRequest
+
 	if err = c.ShouldBindUri(&request); err != nil {
 		c.JSON(400, gin.H{"error": err})
 		return nil

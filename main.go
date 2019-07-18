@@ -3,6 +3,7 @@ package main
 import (
 	"LeaderboardsBackend/game"
 	"LeaderboardsBackend/leaderboard"
+	"LeaderboardsBackend/statistics"
 	"LeaderboardsBackend/user"
 	"LeaderboardsBackend/util"
 	"context"
@@ -36,6 +37,7 @@ func main() {
 		game.Register(r, client)
 		leaderboard.Register(r, client)
 		user.Register(r, client)
+		statistics.Register(r, client)
 	}
 
 	r.Run()

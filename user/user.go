@@ -78,6 +78,7 @@ func userHandler(c *gin.Context) []byte {
 
 	if request.ID == "" {
 		c.JSON(400, gin.H{"error": "No user provided"})
+		return nil;
 	}
 
 	matchGame := ``
