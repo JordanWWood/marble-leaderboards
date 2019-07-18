@@ -249,7 +249,7 @@ func instanceHandler(c *gin.Context) []byte {
 				"killer_uuid" : 1.0, 
 				"winners" : 1.0, 
 				"losers" : 1.0, 
-				"finish_event_type" : 1.0
+				"finish_event_type" : 1.0,
 				"author" : 1.0
 			}
 	}]`
