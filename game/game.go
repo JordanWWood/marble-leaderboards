@@ -278,6 +278,11 @@ func instanceHandler(c *gin.Context) []byte {
 			fullGameResponse.Scores = append(fullGameResponse.Scores, score)
 		}
 
+		if result.ServerEventType == "Game" && result.AnalyticEventType == "GameInformation" {
+			log.Println(result)
+			fullGameResponse.Map = result.WorldName
+		}
+
 		if result.ServerEventType == "Game" && result.AnalyticEventType == "Death" {
 			death := death{
 				Killer:     result.KillerName,
