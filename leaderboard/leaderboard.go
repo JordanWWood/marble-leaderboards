@@ -22,6 +22,11 @@ type leaderboardRequest struct {
 }
 
 type mongoResult struct {
+	Entries    []mongoEntry `bson:"entries"`
+	TotalCount int32         `bson:"total_count"`
+}
+
+type mongoEntry struct {
 	ID       string           `bson:"uuid"`
 	Name     string           `bson:"name"`
 	Scores   map[string]int32 `bson:"scores"`
@@ -59,8 +64,7 @@ func leaderboardHandler(r *gin.Context) []byte {
 		length = 100
 	}
 
-	{
-		pipeline := `
+	pipeline := `
 		[
 			%s
 			{ 
@@ -139,15 +143,32 @@ func leaderboardHandler(r *gin.Context) []byte {
 				}
 			}, 
 			%s
-        	{ 
-            	"$skip" : %d
-        	}, 
-        	{ 
-            	"$limit" : %d
-        	}
+			{ 
+				"$group" : {
+					"_id" : null, 
+					"entries" : {
+						"$push" : "$$ROOT"
+					}, 
+					"count" : {
+						"$sum" : 1.0
+					}
+				}
+			}, 
+			{ 
+				"$project" : {
+					"entries" : {
+						"$slice" : [
+							"$entries", 
+							%d, 
+							%d
+						]
+					}, 
+					"total_count" : "$count"
+				}
+			}
     	]`
 
-		match := `
+	match := `
 			{ 
 				"$match" : {
 					%s
@@ -157,27 +178,27 @@ func leaderboardHandler(r *gin.Context) []byte {
 				}
 			}, `
 
-		instanceMatch := ""
-		if request.Instance != "" {
-			instanceMatch = fmt.Sprintf("\"instance_id\": \"%s\",", request.Instance)
-		}
+	instanceMatch := ""
+	if request.Instance != "" {
+		instanceMatch = fmt.Sprintf("\"instance_id\": \"%s\",", request.Instance)
+	}
 
-		modeMatch := ""
-		if request.Mode != "" {
-			modeMatch = fmt.Sprintf("\"game_mode_id\": \"%s\",", request.Mode)
-		}
+	modeMatch := ""
+	if request.Mode != "" {
+		modeMatch = fmt.Sprintf("\"game_mode_id\": \"%s\",", request.Mode)
+	}
 
-		gameMatch := ""
-		if request.Game != "" {
-			gameMatch = fmt.Sprintf("\"game_id\": \"%s\",", request.Game)
-		}
+	gameMatch := ""
+	if request.Game != "" {
+		gameMatch = fmt.Sprintf("\"game_id\": \"%s\",", request.Game)
+	}
 
-		match = fmt.Sprintf(match, instanceMatch, modeMatch, gameMatch)
+	match = fmt.Sprintf(match, instanceMatch, modeMatch, gameMatch)
 
-		sort := ""
-		if request.Filter != "" {
-			filters := strings.Split(request.Filter, ",")
-			sort = `
+	sort := ""
+	if request.Filter != "" {
+		filters := strings.Split(request.Filter, ",")
+		sort = `
 			{
 				"$match" : {
 					%s
@@ -188,72 +209,70 @@ func leaderboardHandler(r *gin.Context) []byte {
                 	%s
             	}
         	},`
-			sortTemplate := ``
-			matchTemplate := ``
+		sortTemplate := ``
+		matchTemplate := ``
 
-			for i, filter := range filters {
-				if strings.HasPrefix(filter, "-") {
-					if i == 0 {
-						matchTemplate += "\"scores." + filter[1:] + "\" : { \"$exists\" : true, \"$ne\" : null }"
-					}
-
-					sortTemplate += "\"scores." + filter[1:] + "\" : 1.0"
-				} else {
-					if i == 0 {
-						matchTemplate += "\"scores." + filter + "\" : { \"$exists\" : true, \"$ne\" : null }"
-					}
-
-					sortTemplate += "\"scores." + filter + "\" : -1.0"
+		for i, filter := range filters {
+			if strings.HasPrefix(filter, "-") {
+				if i == 0 {
+					matchTemplate += "\"scores." + filter[1:] + "\" : { \"$exists\" : true, \"$ne\" : null }"
 				}
 
-				if (i+1 != len(filters)) {
-					sortTemplate += ","
+				sortTemplate += "\"scores." + filter[1:] + "\" : 1.0"
+			} else {
+				if i == 0 {
+					matchTemplate += "\"scores." + filter + "\" : { \"$exists\" : true, \"$ne\" : null }"
 				}
+
+				sortTemplate += "\"scores." + filter + "\" : -1.0"
 			}
-			sort = fmt.Sprintf(sort, matchTemplate, sortTemplate)
-		}
 
-		userMatch := ``
-		if request.User != "" {
-			userMatch += `
+			if i+1 != len(filters) {
+				sortTemplate += ","
+			}
+		}
+		sort = fmt.Sprintf(sort, matchTemplate, sortTemplate)
+	}
+
+	userMatch := ``
+	if request.User != "" {
+		userMatch += `
 			{ 
 				"$match" : {
 					"uuid" : "%s"
 				}
 			},`
 
-			userMatch = fmt.Sprintf(userMatch, request.User)
-		}
-
-		pipeline = fmt.Sprintf(pipeline, match, sort, userMatch, (page*length)-length, length)
-
-		collection = Client.Database("Analytics").Collection("Events")
-		opts := options.Aggregate()
-		opts.SetAllowDiskUse(true)
-		if cur, err = collection.Aggregate(r, mdb.MongoPipeline(pipeline), opts); err != nil {
-			r.JSON(500, gin.H{ "err": err })
-			return nil
-		}
-
-		var results [] mongoResult
-		for cur.Next(r) {
-			var result mongoResult
-			err := cur.Decode(&result)
-			if err != nil {
-				r.JSON(500, gin.H{ "err": err })
-				return nil
-			}
-			result.Position++
-
-			results = append(results, result)
-		}
-
-		json, err := json2.MarshalIndent(results, "", "    ")
-		if err != nil {
-			log.Fatal(err)
-			return nil
-		}
-
-		return json
+		userMatch = fmt.Sprintf(userMatch, request.User)
 	}
+
+	pipeline = fmt.Sprintf(pipeline, match, sort, userMatch, (page*length)-length, length)
+
+	collection = Client.Database("Analytics").Collection("Events")
+	opts := options.Aggregate()
+	opts.SetAllowDiskUse(true)
+	if cur, err = collection.Aggregate(r, mdb.MongoPipeline(pipeline), opts); err != nil {
+		r.JSON(500, gin.H{"err": err})
+		return nil
+	}
+
+	var results [] mongoResult
+	for cur.Next(r) {
+		var result mongoResult
+		err := cur.Decode(&result)
+		if err != nil {
+			r.JSON(500, gin.H{"err": err})
+			return nil
+		}
+
+		results = append(results, result)
+	}
+
+	json, err := json2.MarshalIndent(results, "", "    ")
+	if err != nil {
+		log.Fatal(err)
+		return nil
+	}
+
+	return json
 }
