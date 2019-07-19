@@ -256,19 +256,16 @@ func leaderboardHandler(r *gin.Context) []byte {
 		return nil
 	}
 
-	var results [] mongoResult
+	var result mongoResult
 	for cur.Next(r) {
-		var result mongoResult
 		err := cur.Decode(&result)
 		if err != nil {
 			r.JSON(500, gin.H{"err": err})
 			return nil
 		}
-
-		results = append(results, result)
 	}
 
-	json, err := json2.MarshalIndent(results, "", "    ")
+	json, err := json2.MarshalIndent(result, "", "    ")
 	if err != nil {
 		log.Fatal(err)
 		return nil
