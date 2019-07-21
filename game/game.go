@@ -30,6 +30,7 @@ type fullGameResponse struct {
 	Losers    map[string]string
 	Scores    [] score
 	Deaths    [] death
+	Timeline  [] timeline
 }
 
 type score struct {
@@ -47,6 +48,13 @@ type death struct {
 	VictimUUID string
 	Reason     string
 	Time       int64
+}
+
+type timeline struct {
+	Phrase         string
+	Tags           map[string]string
+	TimeSinceStart int64
+	Time           int64
 }
 
 type gamesResult struct {
@@ -296,6 +304,17 @@ func instanceHandler(c *gin.Context) []byte {
 			}
 
 			fullGameResponse.Deaths = append(fullGameResponse.Deaths, death)
+		}
+
+		if result.ServerEventType == "Game" && result.AnalyticEventType == "Timeline" {
+			entry := timeline{
+				Phrase: result.Phrase,
+				Tags: result.Tags,
+				TimeSinceStart: result.TimeSinceStart,
+				Time: result.TimeCode,
+			}
+
+			fullGameResponse.Timeline = append(fullGameResponse.Timeline, entry)
 		}
 	})
 

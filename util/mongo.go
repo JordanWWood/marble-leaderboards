@@ -29,6 +29,9 @@ type MongoResult struct {
 	Losers            map[string]string `bson:"losers"`
 	FinishEventType   string            `bson:"finish_event_type"`
 	Author            string            `bson:"author"`
+	Phrase            string            `bson:"phrase"`
+	Tags              map[string]string `bson:"tags"`
+	TimeSinceStart    int64             `bson:"time_since_start"`
 }
 
 func RunPipelineOnEvents(pipeline string, client *mongo.Client, ctx *gin.Context, action func(result MongoResult)) {
