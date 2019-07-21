@@ -258,7 +258,10 @@ func instanceHandler(c *gin.Context) []byte {
 				"winners" : 1.0, 
 				"losers" : 1.0, 
 				"finish_event_type" : 1.0,
-				"author" : 1.0
+				"author" : 1.0,
+				"phrase" : 1.0,
+				"tags": 1.0,
+				"time_since_start": 1.0
 			}
 	}]`
 	pipeline = fmt.Sprintf(pipeline, request.ID)
