@@ -5,7 +5,11 @@ import (
 	json2 "encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/simagix/keyhole/mdb"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"log"
+	"strconv"
 )
 
 type userRequest struct {
@@ -19,15 +23,146 @@ type gameModeUserResponse struct {
 	EventTotals map[string]map[string]map[string]int64
 }
 
+type recentGameBson struct {
+	GameID     string            `bson:"game_id"`
+	GameModeID string            `bson:"game_mode_id"`
+	InstanceID string            `bson:"instance_id"`
+	Winners    map[string]string `bson:"winners"`
+	Losers     map[string]string `bson:"losers"`
+}
+
 var Client *mongo.Client
 
 func Register(r *gin.Engine, client *mongo.Client) {
 	Client = client
 
 	util.CachedGET(r, "/user", userHandler)
+	util.CachedGET(r, "/user/recent/:id", recentHandler)
 	util.CachedGET(r, "/user/profile/:id", userHandler)
 	util.CachedGET(r, "/user/profile/:id/:game", userHandler)
 	util.CachedGET(r, "/user/profile/:id/:game/:mode", userHandler)
+}
+
+func recentHandler(c *gin.Context) []byte {
+	var err error
+	var collection *mongo.Collection
+	var cur *mongo.Cursor
+
+	var request userRequest
+	if err := c.ShouldBindUri(&request); err != nil {
+		c.JSON(400, gin.H{"error": err})
+		return nil
+	}
+
+	page, err := strconv.Atoi(c.Query("page"))
+	length, err := strconv.Atoi(c.Query("length"))
+	if err != nil {
+		page = 1
+		length = 100
+	}
+
+	pipeline := `
+	[
+        { 
+            "$match" : {
+                "analytic_event_type" : "Finish"
+            }
+        }, 
+        { 
+            "$project" : {
+                "game_id" : "$game_id", 
+                "game_mode_id" : "$game_mode_id", 
+                "instance_id" : "$instance_id", 
+                "winners" : "$winners", 
+                "losers" : "$losers", 
+                "end_time" : "$time_code"
+            }
+        }, 
+        { 
+            "$group" : {
+                "_id" : {
+                    "player" : {
+                        "$or" : [
+                            {
+                                "$gt" : [
+                                    "$winners.%s", 
+                                    null
+                                ]
+                            }, 
+                            {
+                                "$gt" : [
+                                    "$losers.%s", 
+                                    null
+                                ]
+                            }
+                        ]
+                    }, 
+                    "game_id" : "$game_id", 
+                    "game_mode_id" : "$game_mode_id", 
+                    "instance_id" : "$instance_id", 
+                    "winners" : "$winners", 
+                    "losers" : "$losers", 
+                    "end_time" : "$time_code"
+                }
+            }
+        }, 
+        { 
+            "$match" : {
+                "_id.player" : true
+            }
+        }, 
+        { 
+            "$replaceRoot" : {
+                "newRoot" : "$_id"
+            }
+        }, 
+        { 
+            "$project" : {
+                "game_id" : 1.0, 
+                "game_mode_id" : 1.0, 
+                "instance_id" : 1.0, 
+                "winners" : 1.0, 
+                "losers" : 1.0
+            }
+        },
+		{
+			"$skip": %d
+		},
+		{
+			"$limit": %d
+		}
+    ]`
+
+	pipeline = fmt.Sprintf(pipeline, request.ID, request.ID, (page*length)-length, length)
+
+	collection = Client.Database("Analytics").Collection("Events")
+	opts := options.Aggregate()
+	opts.SetAllowDiskUse(true)
+	if cur, err = collection.Aggregate(c, mdb.MongoPipeline(pipeline), opts); err != nil {
+		c.JSON(500, gin.H{"err": err})
+		return nil
+	}
+
+	var results [] recentGameBson
+	for cur.Next(c) {
+		var result recentGameBson
+
+		err := cur.Decode(&result)
+		if err != nil {
+			c.JSON(500, gin.H{"err": err})
+			return nil
+		}
+
+		results = append(results, result)
+	}
+
+	json, err := json2.MarshalIndent(results, "", "    ")
+	if err != nil {
+		log.Fatal(err)
+		return nil
+	}
+
+	return json
 }
 
 func userHandler(c *gin.Context) []byte {
@@ -132,7 +267,7 @@ func userHandler(c *gin.Context) []byte {
 
 	json, err := json2.MarshalIndent(gameModeUserResponse, "", "    ")
 	if err != nil {
-		c.JSON(500, gin.H{ "err": err })
+		c.JSON(500, gin.H{"err": err})
 		return nil
 	}
 	return json
