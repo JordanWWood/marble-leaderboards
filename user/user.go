@@ -29,6 +29,7 @@ type recentGameBson struct {
 	InstanceID string            `bson:"instance_id"`
 	Winners    map[string]string `bson:"winners"`
 	Losers     map[string]string `bson:"losers"`
+	EndTime    int64             `bson:"end_time"`
 }
 
 var Client *mongo.Client
@@ -55,9 +56,12 @@ func recentHandler(c *gin.Context) []byte {
 	}
 
 	page, err := strconv.Atoi(c.Query("page"))
-	length, err := strconv.Atoi(c.Query("length"))
 	if err != nil {
 		page = 1
+	}
+
+	length, err := strconv.Atoi(c.Query("length"))
+	if err != nil {
 		length = 100
 	}
 
@@ -102,7 +106,7 @@ func recentHandler(c *gin.Context) []byte {
                     "instance_id" : "$instance_id", 
                     "winners" : "$winners", 
                     "losers" : "$losers", 
-                    "end_time" : "$time_code"
+                    "end_time" : "$end_time"
                 }
             }
         }, 
@@ -122,7 +126,8 @@ func recentHandler(c *gin.Context) []byte {
                 "game_mode_id" : 1.0, 
                 "instance_id" : 1.0, 
                 "winners" : 1.0, 
-                "losers" : 1.0
+                "losers" : 1.0,
+				"end_time": 1.0
             }
         },
 		{
