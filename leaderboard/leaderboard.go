@@ -23,7 +23,7 @@ type leaderboardRequest struct {
 
 type mongoResult struct {
 	Entries    []mongoEntry `bson:"entries"`
-	TotalCount int32         `bson:"total_count"`
+	TotalCount int32        `bson:"total_count"`
 }
 
 type mongoEntry struct {
@@ -263,6 +263,31 @@ func leaderboardHandler(r *gin.Context) []byte {
 			r.JSON(500, gin.H{"err": err})
 			return nil
 		}
+	}
+
+	var prev int32
+	isFirst := true;
+	for _, v := range result.Entries {
+		filters := strings.Split(request.Filter, ",")
+
+		if strings.HasPrefix(filters[0], "-") {
+			if !isFirst && v.Scores[filters[0][1:]] < prev {
+				fmt.Println("true > ", v.Scores[filters[0][1:]], " | ", prev)
+				return leaderboardHandler(r)
+			}
+
+			isFirst = false
+			prev = v.Scores[filters[0][1:]]
+		} else {
+			if !isFirst && v.Scores[filters[0]] > prev {
+				fmt.Println("true < ", v.Scores[filters[0]], " | ", prev)
+				return leaderboardHandler(r)
+			}
+
+			isFirst = false
+			prev = v.Scores[filters[0]]
+		}
+
 	}
 
 	json, err := json2.MarshalIndent(result, "", "    ")
