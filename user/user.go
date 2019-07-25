@@ -131,6 +131,11 @@ func recentHandler(c *gin.Context) []byte {
             }
         },
 		{
+			"$sort": {
+				"end_time": -1.0
+			}
+		},
+		{
 			"$skip": %d
 		},
 		{
